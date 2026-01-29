@@ -8,7 +8,5 @@
   "rewrites": [
     { "source": "/(.*)", "destination": "/api/index.js" }
   ],
-  "crons": [
-    { "path": "/api/cron/schedule", "schedule": "*/1 * * * *" }
-  ]
+  "crons": []
 }
