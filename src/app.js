@@ -35,6 +35,10 @@ const extraOrigins = (process.env.ALLOWED_ORIGINS || "")
   .map((s) => s.trim())
   .filter(Boolean);
 
+const allowedOriginSuffixes = [
+  ".ngrok-free.dev",
+];
+
 const allowedOrigins = [
   "http://localhost:5173",
   "http://127.0.0.1:5173",
@@ -47,6 +51,14 @@ const corsOptions = {
   origin(origin, cb) {
     if (!origin) return cb(null, true);
     if (allowedOrigins.includes(origin)) return cb(null, true);
+    try {
+      const { hostname } = new URL(origin);
+      if (allowedOriginSuffixes.some((suffix) => hostname.endsWith(suffix))) {
+        return cb(null, true);
+      }
+    } catch {
+      // Ignore invalid origin format.
+    }
     return cb(new Error(`CORS blocked: ${origin}`));
   },
   credentials: true,
