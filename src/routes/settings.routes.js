@@ -70,9 +70,6 @@ router.post("/my", async (req, res) => {
 
     const payload = {
       device_key,
-      discord_webhook_url: String(
-        pickValue(req.body.discord_webhook_url, existing?.discord_webhook_url, "")
-      ).trim(),
 
       pump_flow_rate_lpm: Number(
         pickValue(req.body.pump_flow_rate_lpm, existing?.pump_flow_rate_lpm, 0)
