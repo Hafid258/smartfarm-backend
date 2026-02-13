@@ -17,6 +17,9 @@ const schema = new mongoose.Schema(
     // device key ที่ ESP32 ต้องส่งมาให้ตรง
     device_key: { type: String, default: "123456789" },
 
+    // farm-level discord webhook (optional)
+    discord_webhook_url: { type: String, default: "" },
+
     // thresholds (รองรับทั้งชื่อเก่า/ใหม่)
     temp_threshold: { type: Number, default: 35 },
     rh_threshold: { type: Number, default: 90 },
