@@ -262,15 +262,53 @@ router.post("/sensor", async (req, res) => {
 
     const ts = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
 
-    const temperature = Number(req.body.temperature ?? 0);
-    const humidity_air = Number(req.body.humidity_air ?? 0);
+    const temperature = Number(req.body.temperature);
+    const humidity_air = Number(req.body.humidity_air);
     const soil_moisture = Number(req.body.soil_moisture ?? 0);
     const soil_raw_adc = Number(req.body.soil_raw_adc ?? 0);
 
     // ✅ แสง
-    const light_percent = Number(req.body.light_percent ?? 0);
+    const light_percent =
+      req.body.light_percent === null || req.body.light_percent === undefined
+        ? 0
+        : Number(req.body.light_percent);
     const light_raw_adc = Number(req.body.light_raw_adc ?? 0);
-    const light_lux = req.body.light_lux !== undefined ? Number(req.body.light_lux) : null;
+    const light_lux =
+      req.body.light_lux === null || req.body.light_lux === undefined
+        ? null
+        : Number(req.body.light_lux);
+
+    // hard guard: กัน NaN/Infinity ตั้งแต่ต้นทาง request
+    if (!Number.isFinite(temperature) || !Number.isFinite(humidity_air)) {
+      return res.status(400).json({
+        error: "invalid temperature/humidity_air",
+        detail: "temperature and humidity_air must be finite numbers",
+      });
+    }
+    if (!Number.isFinite(soil_moisture) || !Number.isFinite(soil_raw_adc)) {
+      return res.status(400).json({
+        error: "invalid soil values",
+        detail: "soil_moisture and soil_raw_adc must be finite numbers",
+      });
+    }
+    if (!Number.isFinite(light_percent) || !Number.isFinite(light_raw_adc)) {
+      return res.status(400).json({
+        error: "invalid light values",
+        detail: "light_percent and light_raw_adc must be finite numbers",
+      });
+    }
+    if (light_lux !== null && !Number.isFinite(light_lux)) {
+      return res.status(400).json({
+        error: "invalid light_lux",
+        detail: "light_lux must be null or a finite number",
+      });
+    }
+    if (humidity_air <= 0 || humidity_air > 100) {
+      return res.status(400).json({
+        error: "invalid humidity_air range",
+        detail: "humidity_air must be > 0 and <= 100 to compute indices",
+      });
+    }
 
     const storeFarmId = farmIdForStore(farm_id);
 
@@ -291,6 +329,12 @@ router.post("/sensor", async (req, res) => {
     const dew_point = calcDewPoint(temperature, humidity_air);
     const vpd = calcVPD(temperature, humidity_air);
     const gdd = calcGDD(temperature, 10);
+    if (!Number.isFinite(dew_point) || !Number.isFinite(vpd) || !Number.isFinite(gdd)) {
+      return res.status(400).json({
+        error: "invalid derived index values",
+        detail: "dew_point/vpd/gdd is not finite",
+      });
+    }
 
     const prev = await SensorData.findOne({
       ...farmQueryAnyType(farm_id),
