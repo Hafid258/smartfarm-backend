@@ -263,8 +263,8 @@ router.post("/sensor", async (req, res) => {
 
     const ts = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
 
-    const temperature = Number(req.body.temperature);
-    const humidity_air = Number(req.body.humidity_air);
+    let temperature = Number(req.body.temperature);
+    let humidity_air = Number(req.body.humidity_air);
     const soil_moisture = Number(req.body.soil_moisture ?? 0);
     const soil_raw_adc = Number(req.body.soil_raw_adc ?? 0);
 
@@ -279,7 +279,32 @@ router.post("/sensor", async (req, res) => {
         ? null
         : Number(req.body.light_lux);
 
-    // hard guard: กัน NaN/Infinity ตั้งแต่ต้นทาง request
+    // hard guard with fallback: ถ้าค่าหลุดเป็น NaN/Infinity ให้ยืมค่าล่าสุดที่ valid แทน
+    if (!Number.isFinite(temperature) || !Number.isFinite(humidity_air)) {
+      const prevValid = await SensorData.findOne({
+        ...farmQueryAnyType(farm_id),
+        temperature: { $type: "number" },
+        humidity_air: { $type: "number" },
+      })
+        .sort({ timestamp: -1 })
+        .lean();
+
+      if (prevValid) {
+        const tPrev = Number(prevValid.temperature);
+        const hPrev = Number(prevValid.humidity_air);
+        if (Number.isFinite(tPrev) && Number.isFinite(hPrev)) {
+          temperature = tPrev;
+          humidity_air = hPrev;
+          console.warn("DEVICE SENSOR WARN: invalid temp/rh from device, fallback to previous valid", {
+            farm_id: String(farm_id),
+            incoming_temperature: req.body.temperature,
+            incoming_humidity_air: req.body.humidity_air,
+            fallback_temperature: temperature,
+            fallback_humidity_air: humidity_air,
+          });
+        }
+      }
+    }
     if (!Number.isFinite(temperature) || !Number.isFinite(humidity_air)) {
       return res.status(400).json({
         error: "invalid temperature/humidity_air",
