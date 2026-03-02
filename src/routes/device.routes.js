@@ -265,15 +265,28 @@ router.post("/sensor", async (req, res) => {
 
     let temperature = Number(req.body.temperature);
     let humidity_air = Number(req.body.humidity_air);
-    const soil_moisture = Number(req.body.soil_moisture ?? 0);
-    const soil_raw_adc = Number(req.body.soil_raw_adc ?? 0);
 
-    // ✅ แสง
+    const hasSoilMoisture = req.body.soil_moisture !== null && req.body.soil_moisture !== undefined;
+    const hasSoilRawAdc = req.body.soil_raw_adc !== null && req.body.soil_raw_adc !== undefined;
+    if (!hasSoilMoisture || !hasSoilRawAdc) {
+      return res.status(400).json({
+        error: "missing soil values",
+        detail: "soil_moisture and soil_raw_adc are required",
+      });
+    }
+
+    const soil_moisture = Number(req.body.soil_moisture);
+    const soil_raw_adc = Number(req.body.soil_raw_adc);
+
+    // ✅ แสง (null = อ่านไม่ได้, ไม่บังคับให้เป็น 0)
     const light_percent =
       req.body.light_percent === null || req.body.light_percent === undefined
-        ? 0
+        ? null
         : Number(req.body.light_percent);
-    const light_raw_adc = Number(req.body.light_raw_adc ?? 0);
+    const light_raw_adc =
+      req.body.light_raw_adc === null || req.body.light_raw_adc === undefined
+        ? null
+        : Number(req.body.light_raw_adc);
     const light_lux =
       req.body.light_lux === null || req.body.light_lux === undefined
         ? null
@@ -317,10 +330,16 @@ router.post("/sensor", async (req, res) => {
         detail: "soil_moisture and soil_raw_adc must be finite numbers",
       });
     }
-    if (!Number.isFinite(light_percent) || !Number.isFinite(light_raw_adc)) {
+    if (light_percent !== null && !Number.isFinite(light_percent)) {
       return res.status(400).json({
-        error: "invalid light values",
-        detail: "light_percent and light_raw_adc must be finite numbers",
+        error: "invalid light_percent",
+        detail: "light_percent must be null or a finite number",
+      });
+    }
+    if (light_raw_adc !== null && !Number.isFinite(light_raw_adc)) {
+      return res.status(400).json({
+        error: "invalid light_raw_adc",
+        detail: "light_raw_adc must be null or a finite number",
       });
     }
     if (light_lux !== null && !Number.isFinite(light_lux)) {
