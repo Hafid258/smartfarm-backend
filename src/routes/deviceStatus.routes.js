@@ -62,7 +62,7 @@ router.post("/status", resolveFarmId, async (req, res) => {
   try {
     const farm_id = req.farmId;
 
-    const device_key = String(req.body.device_key || "").trim();
+    const device_key = String(req.body?.device_key || req.query?.device_key || "").trim();
     if (!device_key) return res.status(400).json({ error: "device_key missing" });
 
     const setting = await ensureFarmSetting(farm_id, device_key);

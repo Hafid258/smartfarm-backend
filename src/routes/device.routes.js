@@ -248,7 +248,8 @@ async function maybeNotifyAlertRules({ farm_id, metrics }) {
 // POST /api/device/sensor
 router.post("/sensor", async (req, res) => {
   try {
-    const { device_key, farm_id } = req.body;
+    const device_key = String(req.body?.device_key || req.query?.device_key || "").trim();
+    const farm_id = String(req.body?.farm_id || req.query?.farm_id || "").trim();
 
     if (!device_key) return res.status(400).json({ error: "device_key missing" });
     if (!farm_id) return res.status(400).json({ error: "farm_id missing" });
