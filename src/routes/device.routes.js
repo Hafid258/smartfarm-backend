@@ -248,6 +248,14 @@ async function maybeNotifyAlertRules({ farm_id, metrics }) {
 // POST /api/device/sensor
 router.post("/sensor", async (req, res) => {
   try {
+    const pick = (key) => {
+      const b = req.body?.[key];
+      if (b !== undefined && b !== null) return b;
+      const q = req.query?.[key];
+      if (q !== undefined && q !== null) return q;
+      return undefined;
+    };
+
     const device_key = String(req.body?.device_key || req.query?.device_key || "").trim();
     const farm_id = String(req.body?.farm_id || req.query?.farm_id || "").trim();
 
@@ -261,13 +269,16 @@ router.post("/sensor", async (req, res) => {
       return res.status(403).json({ error: "Invalid device_key" });
     }
 
-    const ts = req.body.timestamp ? new Date(req.body.timestamp) : new Date();
+    const tsRaw = pick("timestamp");
+    const ts = tsRaw ? new Date(tsRaw) : new Date();
 
-    let temperature = Number(req.body.temperature);
-    let humidity_air = Number(req.body.humidity_air);
+    let temperature = Number(pick("temperature"));
+    let humidity_air = Number(pick("humidity_air"));
 
-    const hasSoilMoisture = req.body.soil_moisture !== null && req.body.soil_moisture !== undefined;
-    const hasSoilRawAdc = req.body.soil_raw_adc !== null && req.body.soil_raw_adc !== undefined;
+    const soilMoistureRaw = pick("soil_moisture");
+    const soilRawAdcRaw = pick("soil_raw_adc");
+    const hasSoilMoisture = soilMoistureRaw !== null && soilMoistureRaw !== undefined;
+    const hasSoilRawAdc = soilRawAdcRaw !== null && soilRawAdcRaw !== undefined;
     if (!hasSoilMoisture || !hasSoilRawAdc) {
       return res.status(400).json({
         error: "missing soil values",
@@ -275,22 +286,25 @@ router.post("/sensor", async (req, res) => {
       });
     }
 
-    const soil_moisture = Number(req.body.soil_moisture);
-    const soil_raw_adc = Number(req.body.soil_raw_adc);
+    const soil_moisture = Number(soilMoistureRaw);
+    const soil_raw_adc = Number(soilRawAdcRaw);
 
     // ✅ แสง (null = อ่านไม่ได้, ไม่บังคับให้เป็น 0)
+    const lightPercentRaw = pick("light_percent");
+    const lightRawAdcRaw = pick("light_raw_adc");
+    const lightLuxRaw = pick("light_lux");
     const light_percent =
-      req.body.light_percent === null || req.body.light_percent === undefined
+      lightPercentRaw === null || lightPercentRaw === undefined
         ? null
-        : Number(req.body.light_percent);
+        : Number(lightPercentRaw);
     const light_raw_adc =
-      req.body.light_raw_adc === null || req.body.light_raw_adc === undefined
+      lightRawAdcRaw === null || lightRawAdcRaw === undefined
         ? null
-        : Number(req.body.light_raw_adc);
+        : Number(lightRawAdcRaw);
     const light_lux =
-      req.body.light_lux === null || req.body.light_lux === undefined
+      lightLuxRaw === null || lightLuxRaw === undefined
         ? null
-        : Number(req.body.light_lux);
+        : Number(lightLuxRaw);
 
     // hard guard with fallback: ถ้าค่าหลุดเป็น NaN/Infinity ให้ยืมค่าล่าสุดที่ valid แทน
     if (!Number.isFinite(temperature) || !Number.isFinite(humidity_air)) {
